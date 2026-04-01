@@ -24,7 +24,8 @@
 #if __STDC_VERSION__ >= 201112L
 #define _STRINGIFY(...) # __VA_ARGS__
 #define STRINGIFY(...) _STRINGIFY(__VA_ARGS__)
-_Static_assert(sizeof(size_t) >= sizeof(offset_t), "size_t must be at least as large as " STRINGIFY(offset_t));
+_Static_assert(sizeof(size_t) >= sizeof(offset_t),
+               "size_t must be at least as large as " STRINGIFY(offset_t));
 #undef _STRINGIFY
 #undef STRINGIFY
 #endif
@@ -35,6 +36,7 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
   struct stat st;
   char * block;
   ssize_t count;
+  size_t total = 0;
 
   if (!path || !final_buffer)
   { return -1;
@@ -44,53 +46,47 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
   if (f < 0)
   { return 1;
   }
- 
+
   if (fstat(f, &st) < 0)
   { rv = 1;
     goto end;
   }
-  
+
   if (S_ISREG(st.st_mode))
-  {
-    offset_t length = seek(f, 0, SEEK_END);
-    if (length < 0
-    ||  seek(f, 0, SEEK_SET) < 0)
+  { offset_t length = seek(f, 0, SEEK_END);
+    if (length < 0 || seek(f, 0, SEEK_SET) < 0)
     { rv = 1;
       goto end;
     }
-    
+
     block = malloc(length + 1);
     if (!block)
     { rv = 1;
       goto end;
     }
-  
-    { size_t total = 0;
-      while (total < (size_t) length)
-      { count = read(f, block + total, (size_t) length - total);
-        if (count == 0)
-        { break;
-        }
-        if (count < 0)
-        { free(block);
-          rv = 1;
-          goto end;
-        }
-        total += (size_t) count;
+
+    while (total < (size_t) length)
+    { count = read(f, block + total, (size_t) length - total);
+      if (count == 0)
+      { break;
       }
+      if (count < 0)
+      { free(block);
+        rv = 1;
+        goto end;
+      }
+      total += (size_t) count;
     }
-  
+
     block[length] = '\0';
-  
+
     if (final_buffer_length)
     { *final_buffer_length = length;
     }
   }
   else
-  {
-    char * temporary_buffer;
+  { char * temporary_buffer;
     size_t limit = (size_t) 1 << 16;
-    size_t total = 0;
     block = malloc(limit);
     if (!block)
     { rv = 1;
@@ -100,7 +96,7 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
     for (;;)
     { if (total == limit)
       { limit <<= 1;
-        
+
         temporary_buffer = realloc(block, limit);
         if (!temporary_buffer)
         { free(block);
@@ -109,7 +105,7 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
         }
         block = temporary_buffer;
       }
-      count = read(f, block + total, limit - total);  
+      count = read(f, block + total, limit - total);
       if (count == 0)
       { break;
       }
@@ -137,7 +133,7 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
   *final_buffer = block;
   end:
   close(f);
-  return rv;  
+  return rv;
 }
 
 #ifdef LOCALLY_O_BINARY
