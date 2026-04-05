@@ -4,9 +4,9 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #ifdef _LARGEFILE64_SOURCE
 #define offset_t off64_t
@@ -22,15 +22,14 @@
 #endif
 
 #if __STDC_VERSION__ >= 201112L
-#define _STRINGIFY(...) # __VA_ARGS__
+#define _STRINGIFY(...) #__VA_ARGS__
 #define STRINGIFY(...) _STRINGIFY(__VA_ARGS__)
-_Static_assert(sizeof(size_t) >= sizeof(offset_t),
-               "size_t must be at least as large as " STRINGIFY(offset_t));
+_Static_assert(sizeof(size_t) >= sizeof(offset_t), "size_t must be at least as large as " STRINGIFY(offset_t));
 #undef _STRINGIFY
 #undef STRINGIFY
 #endif
 
-int slurp(char const * const path, char * * const final_buffer, size_t * const final_buffer_length)
+int slurp(char const * const path, char ** const final_buffer, size_t * const final_buffer_length)
 { int f;
   int rv = 0;
   struct stat st;
@@ -38,7 +37,8 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
   ssize_t count;
   size_t total = 0;
 
-  if (!path || !final_buffer)
+  if (!path
+  ||  !final_buffer)
   { return -1;
   }
 
@@ -54,7 +54,8 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
 
   if (S_ISREG(st.st_mode))
   { offset_t length = seek(f, 0, SEEK_END);
-    if (length < 0 || seek(f, 0, SEEK_SET) < 0)
+    if (length < 0
+    ||  seek(f, 0, SEEK_SET) < 0)
     { rv = 1;
       goto end;
     }
@@ -131,7 +132,7 @@ int slurp(char const * const path, char * * const final_buffer, size_t * const f
     }
   }
   *final_buffer = block;
-  end:
+end:
   close(f);
   return rv;
 }
