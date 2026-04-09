@@ -1,8 +1,10 @@
-## slurp.[ch]
-Provides `./slurp.c` & `./slurp.h` see `./slurp.h` for usage.
+## STB-style slurp.h
+
 Include directly in your project.
 
 Written C89-only, POSIX expected: `-D_POSIX_C_SOURCE=200809L` or later.
+
+`#define SLURP_IMPLEMENTATION` in one compilation unit.
 
 Supports reading streams and regular files.
 
@@ -21,13 +23,16 @@ Code is correct. (Note that this is only provable by usage, so be warned.)
 char * slurp(char const * const, size_t * const);
 /* return buffer <- POSITIVE VALID file descriptor, NULLABLE return length. */
 char * slurpfd(const int, size_t * const);
+/* return buffer <- POSITIVE VALID FILE pointer, NULLABLE return length. */
+char * slurpfp(FILE *, size_t * const);
 
-#endif /* SLURP_H_ */
+/* Please define SLURP_IMPLEMENTATION in one compilation unit */
 ```
 
 ## cat
-POSIXLY correct cat implementation using slurp.
+POSIXLY correct cat implementation using slurp, purely as an example.
 Note the code within may be hazardous to ones health, and may cause tumors within the brain.
+catfp just exists to test slurpfp, additionally.
 
 ## Copyright
 Public Domain.

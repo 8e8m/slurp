@@ -1,5 +1,6 @@
 /* IEEE Std 1003.1 2024 Compliant */
-/* cat @BAKE cc -o $* $@ slurp.c -D_POSIX_C_SOURCE=200809L $+ @STOP */
+/* cat @BAKE cc -o $* $@ -std=c89 -D_LARGEFILE64_SOURCE -D_POSIX_C_SOURCE=200809L $+ @STOP */
+#define SLURP_IMPLEMENTATION
 #include "slurp.h"
 #include <errno.h>
 #include <stdlib.h>
@@ -53,8 +54,7 @@ int main(int ac, char * * av)
   }
 
   while (++av, --ac)
-  { 
-    file = *av;
+  { file = *av;
     if (av[0][0] == '-')
     { if (!stdin_read && av[0][1] == '\0')
       { stdin_read = 1;
