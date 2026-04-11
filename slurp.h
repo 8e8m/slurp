@@ -4,19 +4,23 @@
 /* slurp.h -- Public Domain */
 
 #if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L
-#error Please provide -D_POSIX_C_SOURCE=200809L or greater to relavant compilation units.
+#error Please provide -D_POSIX_C_SOURCE=200809L or greater to relevant compilation units.
 #endif
 
 #include <stddef.h>
-
-/* return buffer <- NONNULL filename, NULLABLE return length. */
-char * slurp(char const * const, size_t * const);
-/* return buffer <- POSITIVE VALID file descriptor, NULLABLE return length. */
-char * slurpfd(const int, size_t * const);
-
-#ifndef SLURP_NO_STDIO
 #include <stdio.h>
-char * slurpfp(FILE * fp, size_t * const final_buffer_length);
+
+/* return buffer <- NONNULL filename / POSITIVE fd / VALID FILE *, NULLABLE return length. */
+extern char * slurpfile(char const * const, size_t * const);
+extern char * slurpfd(const int, size_t * const);
+extern char * slurpfp(FILE * const, size_t * const);
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define slurp(a,b) _Generic(a, char *: slurpfile, char const *: slurpfile, \
+                               int: slurpfd, \
+                               FILE *: slurpfp)(a,b)
+#else
+#define slurp(a,b) slurpfile((a),(b))
 #endif
 
 #ifdef SLURP_IMPLEMENTATION
@@ -47,18 +51,17 @@ char * slurpfp(FILE * fp, size_t * const final_buffer_length);
 
 #define OFFSET_MAX ((((offset_t) 1 << (sizeof(offset_t) * CHAR_BIT - 2)) - 1) * 2 + 1)
 
-#if __STDC_VERSION__ >= 201112L
-#define _STRINGIFY(...) #__VA_ARGS__
-#define STRINGIFY(...) _STRINGIFY(__VA_ARGS__)
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define STRINGIFY_(...) #__VA_ARGS__
+#define STRINGIFY(...) STRINGIFY_(__VA_ARGS__)
 /* we care to upgrade offset_t into size_t, hence: */
 _Static_assert(sizeof(size_t) >= sizeof(offset_t), "size_t must be at least as large as " STRINGIFY(offset_t));
 _Static_assert(sizeof(size_t) * CHAR_BIT >= 16, "size_t bitsize must be greater than 16");
-#undef _STRINGIFY
+#undef STRINGIFY_
 #undef STRINGIFY
 #endif
 
-#ifndef SLURP_NO_STDIO
-char * slurpfp(FILE * fp, size_t * const final_buffer_length)
+char * slurpfp(FILE * const fp, size_t * const final_buffer_length)
 { char * buffer = NULL, * tmp;
   size_t count;
   size_t total = 0;
@@ -78,7 +81,7 @@ char * slurpfp(FILE * fp, size_t * const final_buffer_length)
       return buffer;
     }
   
-    fpseek(fp, prior, SEEK_SET);
+    fpseek(fp, 0, SEEK_SET);
     
     while (total < (size_t) length)
     { count = fread(buffer + total, 1, (size_t) length - total, fp);
@@ -142,7 +145,7 @@ char * slurpfp(FILE * fp, size_t * const final_buffer_length)
       { break;
       }
 
-      total += count;
+      total += (size_t) count;
     }    
 
     tmp = realloc(buffer, total + 1);
@@ -162,10 +165,8 @@ char * slurpfp(FILE * fp, size_t * const final_buffer_length)
   return buffer;
 end:
   free(buffer);
-  buffer = NULL;
-  return buffer;
+  return NULL;
 }
-#endif
 
 char * slurpfd(const int f, size_t * const final_buffer_length)
 { struct stat st;
@@ -182,18 +183,24 @@ char * slurpfd(const int f, size_t * const final_buffer_length)
   }
 
   if (S_ISREG(st.st_mode))
-  { offset_t length = seek(f, 0, SEEK_END);
+  { offset_t prior = seek(f, 0, SEEK_CUR);
+    offset_t length = seek(f, 0, SEEK_END);
 
     if (length < 0
-    ||  length == OFFSET_MAX
-    ||  seek(f, 0, SEEK_SET) < 0)
+    ||  length == OFFSET_MAX)
+    { seek(f, prior, SEEK_SET);
+      goto end;
+    }
+
+    if (seek(f, 0, SEEK_SET) < 0)
     { goto end;
     }
 
     buffer = malloc((size_t) length + 1);
 
     if (!buffer)
-    { goto end;
+    { seek(f, prior, SEEK_SET);
+      goto end;
     }
 
     while (total < (size_t) length)
@@ -209,12 +216,12 @@ char * slurpfd(const int f, size_t * const final_buffer_length)
       total += (size_t) count;
     }
 
+    seek(f, prior, SEEK_SET);
+
     if (total < (size_t) length)
     { tmp = realloc(buffer, total + 1);
       if (!tmp)
-      { free(buffer);
-        buffer = NULL;
-        return buffer;
+      { goto end;
       }
       buffer = tmp;
     }
@@ -277,7 +284,7 @@ end:
   return NULL;
 }
 
-char * slurp(char const * const path, size_t * const final_buffer_length)
+char * slurpfile(char const * const path, size_t * const final_buffer_length)
 { char * r;
   int f;
   if (!path)

@@ -1,4 +1,4 @@
-/* catfp, reduced for testing purposes @BAKE cc -o $* $@ -std=c89 -D_LARGEFILE64_SOURCE -D_POSIX_C_SOURCE=200809L $+ @STOP */
+/* catfp, reduced for testing purposes @BAKE cc -I.. -o $* $@ -std=c11 -D_LARGEFILE64_SOURCE -D_POSIX_C_SOURCE=200809L $+ @STOP */
 #define SLURP_IMPLEMENTATION
 #include "slurp.h"
 #include <string.h>
@@ -15,7 +15,7 @@ int main(int ac, char ** av)
     fp = !strcmp(*av, "-") ? stdin : fopen(*av, "rb");
 print:
     if (!fp) { return 1; }
-    buffer = slurpfp(fp, &length);
+    buffer = slurp(fp, &length);
     if (fp != stdin)
     { fclose(fp);
     }

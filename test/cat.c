@@ -1,5 +1,5 @@
 /* IEEE Std 1003.1 2024 Compliant */
-/* cat @BAKE cc -o $* $@ -std=c89 -D_LARGEFILE64_SOURCE -D_POSIX_C_SOURCE=200809L $+ @STOP */
+/* cat @BAKE cc -I.. -o $* $@ -std=c89 -D_LARGEFILE64_SOURCE -D_POSIX_C_SOURCE=200809L $+ @STOP */
 #define SLURP_IMPLEMENTATION
 #include "slurp.h"
 #include <errno.h>
